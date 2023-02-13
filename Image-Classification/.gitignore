@@ -151,3 +151,10 @@ com_crashlytics_export_strings.xml
 crashlytics.properties
 crashlytics-build.properties
 fabric.properties
+
+# ignore in NBI projs
+data_fd_v3
+data_fd_v4
+pretrained
+.vscode
+../.vscode
