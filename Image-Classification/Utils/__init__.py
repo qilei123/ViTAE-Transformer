@@ -3,11 +3,11 @@ from __future__ import division
 from __future__ import print_function
 
 import os
-from .dataset import Dataset
+from .dataset import Dataset,NBIDataset
 from .cache_image_folder import CachedImageFolder
 
 # def build_dataset(is_train, config):
-def build_dataset(directory, idxFilesRoot=None, ZIP_MODE=False):
+def build_dataset(directory, idxFilesRoot=None, ZIP_MODE=False, NBI_num = 0):
     # transform = build_transform(is_train, config)
     if (idxFilesRoot == '') or (idxFilesRoot is None):
         pass
@@ -25,7 +25,9 @@ def build_dataset(directory, idxFilesRoot=None, ZIP_MODE=False):
         dataset = CachedImageFolder(directory, ann_file, prefix, transform=None,
                         cache_mode='full')
                         # if prefix=='train.zip@/' else 'part')
-    else:
+    elif NBI_num:
+        dataset = NBIDataset(directory, idxFilesRoot=idxFilesRoot, NBI_num=NBI_num)
+    else:        
         dataset = Dataset(directory, idxFilesRoot=idxFilesRoot)
 
 

@@ -17,7 +17,7 @@ def _cfg(url='', **kwargs):
     }
 
 default_cfgs = {
-    'ViTAE_stages3_7': _cfg(),
+    'ViTAE_stages3_7': _cfg('file:///home/ycao/DEVELOPMENTS/ViTAE-Transformer/Image-Classification/pretrained/ViTAEv2-B.pt'),
 }
 
 @register_model

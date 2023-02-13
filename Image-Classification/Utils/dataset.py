@@ -122,6 +122,36 @@ class Dataset(data.Dataset):
             fn = lambda x: os.path.relpath(x, self.root)
         return [fn(x[0]) for x in self.samples]
 
+class NBIDataset(Dataset):
+    def __init__(
+            self,
+            root,
+            load_bytes=False,
+            transform=None,
+            class_map='',
+            idxFilesRoot='',
+            NBI_num=4):
+
+        assert NBI_num in [4,3,2] , "No task for class_num:"+str(NBI_num)
+        if NBI_num==4:
+            class_to_idx = {"0":0,"1":1,"2":2,"3":3}
+        elif NBI_num==3:
+            class_to_idx = {"1":0,"2":1,"3":2}
+        elif  NBI_num==2:
+            class_to_idx = {"0":0,"1":1,"2":1,"3":1}   
+        #if class_map:
+        #    class_to_idx = load_class_map(class_map, root)
+        images, class_to_idx = find_images_and_targets(root, class_to_idx=class_to_idx, idxFilesRoot=idxFilesRoot)
+        if len(images) == 0:
+            raise RuntimeError(f'Found 0 images in subfolders of {root}. '
+                            f'Supported image extensions are {", ".join(IMG_EXTENSIONS)}')
+        self.class_to_idx = class_to_idx
+
+        self.root = root
+        self.samples = images
+        self.imgs = self.samples  # torchvision ImageFolder compat
+        self.load_bytes = load_bytes
+        self.transform = transform    
 
 def _extract_tar_info(tarfile, class_to_idx=None, sort=True):
     files = []

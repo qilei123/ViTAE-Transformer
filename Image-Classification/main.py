@@ -38,6 +38,10 @@ _logger = logging.getLogger('train')
 import utils
 from utils import resume_checkpoint, load_state_dict
 
+import warnings
+
+warnings.filterwarnings('ignore', category=UserWarning, append=True)
+
 # The first arg parser parses out only the --config argument, this argument is used to
 # load a yaml file containing key-values that override the defaults for the main parser below
 config_parser = parser = argparse.ArgumentParser(description='Training Config', add_help=False)
@@ -199,7 +203,7 @@ parser.add_argument('--split-bn', action='store_true',
                     help='Enable separate BN layers per augmentation split.')
 
 # Model Exponential Moving Average
-parser.add_argument('--model-ema', action='store_true', default=True,
+parser.add_argument('--model-ema', action='store_true', default=False,
                     help='Enable tracking moving average of model weights')
 parser.add_argument('--model-ema-force-cpu', action='store_true', default=False,
                     help='Force ema to be tracked on CPU, rank=0 node only. Disables EMA validation.')
@@ -244,6 +248,13 @@ parser.add_argument('--RA', action='store_true', default=False,
                     help='use the repeated augmentation')
 parser.add_argument('--ZIP', action='store_true', default=False,
                     help='whether to load data from zip file')
+
+parser.add_argument('--NBI', action='store_true', default=False,
+                    help='NBI dataset')
+
+parser.add_argument('--NBI-num', type=int, default=0,
+                    help='Number of NBI classes')
+
 try:
     from apex import amp
     from apex.parallel import DistributedDataParallel as ApexDDP
@@ -462,7 +473,11 @@ def main():
     if not os.path.exists(train_dir):
         _logger.error('Training folder does not exist at: {}'.format(train_dir))
         exit(1)
-    dataset_train = build_dataset(train_dir, idxFilesRoot=args.dataDividePath, ZIP_MODE=args.ZIP)
+    
+    if args.NBI:
+        args.NBI_num = args.num_classes
+    
+    dataset_train = build_dataset(train_dir, idxFilesRoot=args.dataDividePath, ZIP_MODE=args.ZIP, NBI_num=args.NBI_num)
 
     collate_fn = None
     mixup_fn = None
@@ -523,7 +538,7 @@ def main():
         if not os.path.isdir(eval_dir):
             _logger.error('Validation folder does not exist at: {}'.format(eval_dir))
             exit(1)
-    dataset_eval = build_dataset(eval_dir, idxFilesRoot='', ZIP_MODE=False)
+    dataset_eval = build_dataset(eval_dir, idxFilesRoot='', ZIP_MODE=False, NBI_num=args.NBI_num)
 
 
     loader_eval = create_loader(
@@ -568,7 +583,7 @@ def main():
     if args.local_rank == 0:
         output_base = args.output if args.output else './output'
         exp_name = '-'.join([
-            datetime.now().strftime("%Y%m%d-%H%M%S"),
+            #datetime.now().strftime("%Y%m%d-%H%M%S"),
             args.model,
             str(data_config['input_size'][-1])
         ])
@@ -760,7 +775,7 @@ def validate(model, loader, loss_fn, args, amp_autocast=suppress, log_suffix='')
                 target = target[0:target.size(0):reduce_factor]
 
             loss = loss_fn(output, target)
-            acc1, acc5 = accuracy(output, target, topk=(1, 5))
+            acc1, acc5 = accuracy(output, target, topk=(1, min(5,args.num_classes)))
 
             if args.distributed:
                 reduced_loss = reduce_tensor(loss.data, args.world_size)
